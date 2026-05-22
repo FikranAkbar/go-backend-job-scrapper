@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/FikranAkbar/go-backend-job-scrapper/internal/store"
@@ -46,9 +47,9 @@ func (h *HimalayasScraper) Fetch() ([]store.Job, error) {
 			Company struct {
 				Name string `json:"name"`
 			} `json:"company"`
-			Location string   `json:"locationRestrictions"`
-			URL      string   `json:"applicationLink"`
-			Tags     []string `json:"tags"`
+			LocationRestrictions []string `json:"locationRestrictions"`
+			URL                  string   `json:"applicationLink"`
+			Tags                 []string `json:"tags"`
 		} `json:"jobs"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
@@ -61,13 +62,15 @@ func (h *HimalayasScraper) Fetch() ([]store.Job, error) {
 		if jobURL == "" {
 			jobURL = "https://himalayas.app/jobs/" + j.Slug
 		}
+		// Join location restrictions into a single string
+		location := strings.Join(j.LocationRestrictions, ", ")
 		sid := sourceIDFromURL("himalayas", jobURL)
 		jobs = append(jobs, store.Job{
 			SourceID: sid,
 			Source:   "himalayas",
 			Title:    j.Title,
 			Company:  j.Company.Name,
-			Location: j.Location,
+			Location: location,
 			URL:      jobURL,
 			Tags:     j.Tags,
 		})

@@ -13,7 +13,7 @@ import (
 	"github.com/FikranAkbar/go-backend-job-scrapper/internal/store"
 )
 
-const geminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generatecontent"
+const geminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 
 // Scorer scores jobs using the Gemini Flash API.
 type Scorer struct {
