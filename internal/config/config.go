@@ -13,7 +13,9 @@ type Config struct {
 	TelegramBotToken  string
 	TelegramChatID    string
 	GeminiAPIKey      string
-	ScanIntervalHours int // default: 6
+	ScanIntervalHours int    // default: 6
+	ReportFormat      string // "telegram" | "html" | "csv" | "all" (default: "html")
+	ReportOutputDir   string // default: "./reports"
 }
 
 // Load reads environment variables, validates required fields, and returns a Config.
@@ -24,16 +26,32 @@ func Load() (*Config, error) {
 		TelegramBotToken: os.Getenv("TELEGRAM_BOT_TOKEN"),
 		TelegramChatID:   os.Getenv("TELEGRAM_CHAT_ID"),
 		GeminiAPIKey:     os.Getenv("GEMINI_API_KEY"),
+		ReportFormat:     os.Getenv("REPORT_FORMAT"),
+		ReportOutputDir:  os.Getenv("REPORT_OUTPUT_DIR"),
 	}
 
 	if cfg.DBUrl == "" {
 		return nil, fmt.Errorf("config: DB_URL is required")
 	}
-	if cfg.TelegramBotToken == "" {
-		return nil, fmt.Errorf("config: TELEGRAM_BOT_TOKEN is required")
+
+	// Telegram is now optional if using file-based reports
+	if cfg.ReportFormat == "telegram" {
+		if cfg.TelegramBotToken == "" {
+			return nil, fmt.Errorf("config: TELEGRAM_BOT_TOKEN is required when REPORT_FORMAT=telegram")
+		}
+		if cfg.TelegramChatID == "" {
+			return nil, fmt.Errorf("config: TELEGRAM_CHAT_ID is required when REPORT_FORMAT=telegram")
+		}
 	}
-	if cfg.TelegramChatID == "" {
-		return nil, fmt.Errorf("config: TELEGRAM_CHAT_ID is required")
+
+	// Default report format
+	if cfg.ReportFormat == "" {
+		cfg.ReportFormat = "html"
+	}
+
+	// Default output directory
+	if cfg.ReportOutputDir == "" {
+		cfg.ReportOutputDir = "./reports"
 	}
 
 	interval := os.Getenv("SCAN_INTERVAL_HOURS")

@@ -14,6 +14,7 @@ import (
 	"github.com/FikranAkbar/go-backend-job-scrapper/internal/config"
 	"github.com/FikranAkbar/go-backend-job-scrapper/internal/filter"
 	"github.com/FikranAkbar/go-backend-job-scrapper/internal/notifier"
+	"github.com/FikranAkbar/go-backend-job-scrapper/internal/reporter"
 	"github.com/FikranAkbar/go-backend-job-scrapper/internal/scraper"
 	"github.com/FikranAkbar/go-backend-job-scrapper/internal/store"
 )
@@ -50,20 +51,53 @@ func run(cfg *config.Config) error {
 		scraper.NewHimalayas(),
 	}
 	scorer := ai.NewScorer(cfg.GeminiAPIKey)
-	tg := notifier.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID)
+
+	// Initialize reporters based on config
+	var reporters []reporter.Reporter
+	switch cfg.ReportFormat {
+	case "telegram":
+		if cfg.TelegramBotToken != "" && cfg.TelegramChatID != "" {
+			tg := notifier.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID)
+			reporters = append(reporters, tg)
+			slog.Info("reporter: telegram enabled")
+		} else {
+			slog.Warn("telegram config missing, skipping telegram reporter")
+		}
+	case "html":
+		reporters = append(reporters, reporter.NewHTMLReporter(cfg.ReportOutputDir))
+		slog.Info("reporter: html enabled", "output_dir", cfg.ReportOutputDir)
+	case "csv":
+		reporters = append(reporters, reporter.NewCSVReporter(cfg.ReportOutputDir))
+		slog.Info("reporter: csv enabled", "output_dir", cfg.ReportOutputDir)
+	case "all":
+		reporters = append(reporters, reporter.NewHTMLReporter(cfg.ReportOutputDir))
+		reporters = append(reporters, reporter.NewCSVReporter(cfg.ReportOutputDir))
+		if cfg.TelegramBotToken != "" && cfg.TelegramChatID != "" {
+			tg := notifier.NewTelegram(cfg.TelegramBotToken, cfg.TelegramChatID)
+			reporters = append(reporters, tg)
+		}
+		slog.Info("reporter: all formats enabled", "output_dir", cfg.ReportOutputDir)
+	default:
+		return fmt.Errorf("invalid REPORT_FORMAT: %q (must be telegram, html, csv, or all)", cfg.ReportFormat)
+	}
+
+	if len(reporters) == 0 {
+		return fmt.Errorf("no reporters configured")
+	}
+
 	interval := time.Duration(cfg.ScanIntervalHours) * time.Hour
 
 	// Initialize lastDigest so the first weekly digest fires after one full week.
 	lastDigest := time.Now()
 
 	for {
-		if err := runOnce(ctx, scrapers, db, scorer, tg); err != nil {
+		if err := runOnce(ctx, scrapers, db, scorer, reporters); err != nil {
 			slog.Error("scan failed", "err", err)
 		}
 
 		// Send weekly digest when 7 days have elapsed since the last one.
 		if time.Since(lastDigest) >= digestInterval {
-			if err := sendWeeklyDigest(db, tg); err != nil {
+			if err := sendWeeklyDigest(db, reporters); err != nil {
 				slog.Error("weekly digest failed", "err", err)
 			} else {
 				lastDigest = time.Now()
@@ -81,8 +115,8 @@ func run(cfg *config.Config) error {
 	}
 }
 
-// sendWeeklyDigest fetches the top 10 jobs from the past week and sends a digest to Telegram.
-func sendWeeklyDigest(db store.Store, tg *notifier.TelegramNotifier) error {
+// sendWeeklyDigest fetches the top 10 jobs from the past week and sends a digest to all reporters.
+func sendWeeklyDigest(db store.Store, reporters []reporter.Reporter) error {
 	since := time.Now().Add(-digestInterval)
 	jobs, err := db.TopJobs(since, 10)
 	if err != nil {
@@ -92,9 +126,14 @@ func sendWeeklyDigest(db store.Store, tg *notifier.TelegramNotifier) error {
 		slog.Info("weekly digest: no scored jobs to report")
 		return nil
 	}
-	if err := tg.SendDigest(jobs); err != nil {
-		return fmt.Errorf("weekly digest: %w", err)
+
+	for _, r := range reporters {
+		if err := r.GenerateDigest(jobs); err != nil {
+			slog.Error("weekly digest: reporter failed", "err", err)
+			// Continue with other reporters even if one fails
+		}
 	}
+
 	slog.Info("weekly digest sent", "count", len(jobs))
 	return nil
 }
@@ -104,7 +143,7 @@ func runOnce(
 	scrapers []scraper.Scraper,
 	db store.Store,
 	scorer *ai.Scorer,
-	tg *notifier.TelegramNotifier,
+	reporters []reporter.Reporter,
 ) error {
 	// 1. Scrape
 	all := scraper.FetchAll(scrapers)
@@ -133,31 +172,29 @@ func runOnce(
 		return err
 	}
 
-	// 6. Notify on score >= 6
-	var toNotify []store.Job
+	// 6. Count high-scoring jobs
+	highScoreCount := 0
 	for _, j := range scored {
 		if j.AIScore >= 6 {
-			toNotify = append(toNotify, j)
+			highScoreCount++
 		}
 	}
 
-	if len(toNotify) == 0 {
-		slog.Info("scan complete", "new_jobs", len(fresh), "scored", len(scored), "notified", 0)
-		return nil
+	// 7. Generate reports
+	stats := reporter.ReportStats{
+		TotalScraped:   len(all),
+		TotalFiltered:  len(filtered),
+		TotalNew:       len(fresh),
+		TotalHighScore: highScoreCount,
 	}
 
-	if err := tg.Send(toNotify); err != nil {
-		return err
+	for _, r := range reporters {
+		if err := r.Generate(scored, stats); err != nil {
+			slog.Error("reporter failed", "err", err)
+			// Continue with other reporters even if one fails
+		}
 	}
 
-	notifiedIDs := make([]int, 0, len(toNotify))
-	for _, j := range toNotify {
-		notifiedIDs = append(notifiedIDs, j.ID)
-	}
-	if err := db.MarkNotified(notifiedIDs); err != nil {
-		return err
-	}
-
-	slog.Info("scan complete", "new_jobs", len(fresh), "scored", len(scored), "notified", len(toNotify))
+	slog.Info("scan complete", "new_jobs", len(fresh), "scored", len(scored), "high_score", highScoreCount)
 	return nil
 }

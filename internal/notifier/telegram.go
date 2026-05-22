@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FikranAkbar/go-backend-job-scrapper/internal/reporter"
 	"github.com/FikranAkbar/go-backend-job-scrapper/internal/store"
 )
 
@@ -20,6 +21,10 @@ type Notifier interface {
 	Send(jobs []store.Job) error
 	// SendDigest delivers a weekly summary of top-scored jobs.
 	SendDigest(jobs []store.Job) error
+	// Generate creates a notification report (implements reporter.Reporter interface).
+	Generate(jobs []store.Job, stats reporter.ReportStats) error
+	// GenerateDigest creates a weekly digest report (implements reporter.Reporter interface).
+	GenerateDigest(jobs []store.Job) error
 }
 
 // TelegramNotifier sends job notifications via the Telegram Bot API.
@@ -58,6 +63,23 @@ func (t *TelegramNotifier) SendDigest(jobs []store.Job) error {
 		return fmt.Errorf("notifier telegram: send digest: %w", err)
 	}
 	return nil
+}
+
+// Generate implements reporter.Reporter interface - sends jobs as Telegram messages.
+func (t *TelegramNotifier) Generate(jobs []store.Job, stats reporter.ReportStats) error {
+	// Filter only high-scoring jobs (>= 6)
+	var toSend []store.Job
+	for _, j := range jobs {
+		if j.AIScore >= 6 {
+			toSend = append(toSend, j)
+		}
+	}
+	return t.Send(toSend)
+}
+
+// GenerateDigest implements reporter.Reporter interface - sends weekly digest via Telegram.
+func (t *TelegramNotifier) GenerateDigest(jobs []store.Job) error {
+	return t.SendDigest(jobs)
 }
 
 func (t *TelegramNotifier) sendMessage(text string) error {

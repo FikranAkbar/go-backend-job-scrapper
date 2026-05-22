@@ -1,6 +1,11 @@
 # Environment variables (contains sensitive credentials)
 .env
 
+# Generated reports
+reports/
+*.html
+*.csv
+
 # Go build artifacts
 *.exe
 *.exe~
