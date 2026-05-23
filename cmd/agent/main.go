@@ -45,10 +45,15 @@ func run(cfg *config.Config) error {
 	defer db.Close()
 
 	scrapers := []scraper.Scraper{
+		// Global remote boards
 		scraper.NewRemotive(),
 		scraper.NewWeWorkRemotely(),
 		scraper.NewRemoteOK(),
 		scraper.NewHimalayas(),
+		// Social / regional job boards
+		scraper.NewLinkedIn(),
+		scraper.NewGlints(),
+		scraper.NewJobStreet(),
 	}
 	scorer := ai.NewScorer(cfg.GeminiAPIKey)
 

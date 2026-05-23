@@ -21,12 +21,21 @@ func stripHTMLTags(s string) string {
 	return strings.TrimSpace(s)
 }
 
-// truncate returns up to maxBytes UTF-8 characters of s.
+// truncate returns up to maxChars UTF-8 characters of s.
 func truncate(s string, maxChars int) string {
 	runes := []rune(s)
 	if len(runes) <= maxChars {
 		return s
 	}
 	return string(runes[:maxChars])
+}
+
+// reExtract returns the first capture group of re against s, or "".
+func reExtract(re *regexp.Regexp, s string) string {
+	m := re.FindStringSubmatch(s)
+	if len(m) >= 2 {
+		return strings.TrimSpace(m[1])
+	}
+	return ""
 }
 
