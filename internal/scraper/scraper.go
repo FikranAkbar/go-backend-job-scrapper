@@ -34,6 +34,7 @@ func FetchAll(scrapers []Scraper) []store.Job {
 				slog.Error("scraper failed", "source", s.Name(), "err", err)
 				return
 			}
+			slog.Info("scraper ok", "source", s.Name(), "jobs", len(jobs))
 			mu.Lock()
 			allJobs = append(allJobs, jobs...)
 			mu.Unlock()

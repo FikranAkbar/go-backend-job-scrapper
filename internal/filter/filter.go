@@ -21,11 +21,27 @@ var includeKeywords = []string{
 	"grpc",
 	"rest api",
 	"software engineer backend",
+	// broader backend titles that also make sense for the candidate profile
+	"software engineer",
+	"software developer",
+	"server-side",
+	"server side",
+	"java engineer",
+	"java developer",
+	"rust engineer",
+	"rust developer",
+	"full-stack",
+	"fullstack",
+	"full stack",
 }
 
 // excludeKeywords — any match causes a job to be rejected (case-insensitive).
+// These are checked against title+tags combined, so "react" rejects jobs whose
+// title or tag stack is React-focused, even if another tag says "golang".
 var excludeKeywords = []string{
 	"frontend",
+	"front-end",
+	"front end",
 	"react",
 	"vue",
 	"angular",
@@ -40,18 +56,40 @@ var excludeKeywords = []string{
 	"manual tester",
 	"ux designer",
 	"ui designer",
+	"graphic designer",
+	"customer support",
+	"sales",
+	"marketing",
 }
 
-// acceptedLocations — partial, case-insensitive matches that are ok.
+// acceptedLocations — partial, case-insensitive matches that are allowed.
 var acceptedLocations = []string{
 	"remote",
 	"worldwide",
+	"anywhere",
+	"hybrid",
+	"work from home",
+	"wfh",
+	// countries / regions
 	"asia",
 	"indonesia",
-	"jakarta",
 	"japan",
 	"united states",
 	"singapore",
+	"europe",
+	"global",
+	"international",
+	"apac",
+	// Indonesian cities (JobStreet / Glints return these)
+	"jakarta",
+	"bandung",
+	"tangerang",
+	"bekasi",
+	"surabaya",
+	"yogyakarta",
+	"bali",
+	"depok",
+	"bogor",
 }
 
 // IsRelevant returns true when a job passes the keyword filter rules.

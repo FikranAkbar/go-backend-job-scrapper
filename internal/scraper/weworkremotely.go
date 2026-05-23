@@ -10,7 +10,9 @@ import (
 	"github.com/FikranAkbar/go-backend-job-scrapper/internal/store"
 )
 
-const wwrURL = "https://weworkremotely.com/remote-jobs.rss"
+// wwrURL uses the Back-End Programming category feed so we only receive
+// server-side engineering jobs, not the entire WWR firehose (design, support, etc.).
+const wwrURL = "https://weworkremotely.com/categories/remote-back-end-programming-jobs.rss"
 
 // WWRScraper fetches jobs from the We Work Remotely RSS feed.
 type WWRScraper struct {

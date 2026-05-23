@@ -12,7 +12,10 @@ import (
 	"github.com/FikranAkbar/go-backend-job-scrapper/internal/store"
 )
 
-const remotiveURL = "https://remotive.com/api/remote-jobs?limit=100"
+// remotiveURL fetches only "software-dev" category jobs to avoid drowning
+// in marketing/design/support listings. The category maps to the Remotive
+// public API category filter.
+const remotiveURL = "https://remotive.com/api/remote-jobs?category=software-dev&limit=100"
 
 // RemotiveScraper fetches jobs from the Remotive public JSON API.
 type RemotiveScraper struct {

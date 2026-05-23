@@ -11,7 +11,12 @@ import (
 	"github.com/FikranAkbar/go-backend-job-scrapper/internal/store"
 )
 
-const himalayasURL = "https://himalayas.app/jobs/api?limit=100"
+// himalayasURLs are keyword-filtered endpoints so we only receive backend/Go roles.
+// Using ?q= means Himalayas does the heavy lifting server-side, reducing noise.
+var himalayasURLs = []string{
+	"https://himalayas.app/jobs/api?q=golang&limit=50",
+	"https://himalayas.app/jobs/api?q=backend+engineer&limit=50",
+}
 
 // HimalayasScraper fetches jobs from the Himalayas public JSON API.
 type HimalayasScraper struct {
@@ -28,9 +33,34 @@ func NewHimalayas() *HimalayasScraper {
 // Name returns the scraper identifier.
 func (h *HimalayasScraper) Name() string { return "himalayas" }
 
-// Fetch retrieves job listings from the Himalayas API.
+// Fetch retrieves job listings from the Himalayas API using keyword-filtered queries.
 func (h *HimalayasScraper) Fetch() ([]store.Job, error) {
-	resp, err := h.client.Get(himalayasURL)
+	seen := make(map[string]bool)
+	var jobs []store.Job
+	var lastErr error
+
+	for _, apiURL := range himalayasURLs {
+		results, err := h.fetchURL(apiURL)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		for _, j := range results {
+			if !seen[j.SourceID] {
+				seen[j.SourceID] = true
+				jobs = append(jobs, j)
+			}
+		}
+	}
+
+	if len(jobs) == 0 && lastErr != nil {
+		return nil, lastErr
+	}
+	return jobs, nil
+}
+
+func (h *HimalayasScraper) fetchURL(apiURL string) ([]store.Job, error) {
+	resp, err := h.client.Get(apiURL)
 	if err != nil {
 		return nil, fmt.Errorf("scraper himalayas: fetch jobs: %w", err)
 	}
@@ -63,7 +93,6 @@ func (h *HimalayasScraper) Fetch() ([]store.Job, error) {
 		if jobURL == "" {
 			jobURL = "https://himalayas.app/jobs/" + j.Slug
 		}
-		// Join location restrictions into a single string
 		location := strings.Join(j.LocationRestrictions, ", ")
 		sid := sourceIDFromURL("himalayas", jobURL)
 		jobs = append(jobs, store.Job{
