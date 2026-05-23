@@ -132,6 +132,10 @@ func (s *Scorer) ScoreAll(jobs []store.Job) []store.Job {
 
 func buildPrompt(j store.Job) string {
 	tags := strings.Join(j.Tags, ", ")
+	desc := j.Description
+	if len([]rune(desc)) > 500 {
+		desc = string([]rune(desc)[:500]) + "..."
+	}
 	return fmt.Sprintf(`You are a job fit scorer. Rate this job 1–10 for a candidate with:
 - 2–3 years Go (Golang) backend experience
 - Strong: microservices, Saga pattern, SQL optimization, gRPC, REST API design
@@ -143,8 +147,9 @@ Job Title: %s
 Company: %s
 Location: %s
 Tags: %s
+Description (first 500 chars): %s
 
 Respond ONLY in valid JSON with no markdown or preamble:
 {"score": 8, "reason": "Strong Golang microservices role, fully remote, aligns well."}`,
-		j.Title, j.Company, j.Location, tags)
+		j.Title, j.Company, j.Location, tags, desc)
 }

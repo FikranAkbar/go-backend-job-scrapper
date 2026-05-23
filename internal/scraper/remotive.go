@@ -49,6 +49,7 @@ func (r *RemotiveScraper) Fetch() ([]store.Job, error) {
 			CompanyName string   `json:"company_name"`
 			Location    string   `json:"candidate_required_location"`
 			Tags        []string `json:"tags"`
+			Description string   `json:"description"`
 		} `json:"jobs"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
@@ -59,13 +60,14 @@ func (r *RemotiveScraper) Fetch() ([]store.Job, error) {
 	for _, j := range payload.Jobs {
 		sourceID := sourceIDFromURL("remotive", j.URL)
 		jobs = append(jobs, store.Job{
-			SourceID: sourceID,
-			Source:   "remotive",
-			Title:    j.Title,
-			Company:  j.CompanyName,
-			Location: j.Location,
-			URL:      j.URL,
-			Tags:     j.Tags,
+			SourceID:    sourceID,
+			Source:      "remotive",
+			Title:       j.Title,
+			Company:     j.CompanyName,
+			Location:    j.Location,
+			URL:         j.URL,
+			Tags:        j.Tags,
+			Description: stripHTMLTags(j.Description),
 		})
 	}
 	return jobs, nil

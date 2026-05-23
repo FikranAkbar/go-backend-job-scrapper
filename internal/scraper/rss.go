@@ -71,10 +71,11 @@ func (r *RSSScraper) Fetch() ([]store.Job, error) {
 		}
 		sid := sourceIDFromURL(r.name, link)
 		jobs = append(jobs, store.Job{
-			SourceID: sid,
-			Source:   r.name,
-			Title:    item.Title,
-			URL:      link,
+			SourceID:    sid,
+			Source:      r.name,
+			Title:       item.Title,
+			URL:         link,
+			Description: stripHTMLTags(item.Desc),
 		})
 	}
 	return jobs, nil

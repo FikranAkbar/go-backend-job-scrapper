@@ -54,12 +54,13 @@ func (r *RemoteOKScraper) Fetch() ([]store.Job, error) {
 	}
 
 	type remoteOKJob struct {
-		Slug     string   `json:"slug"`
-		URL      string   `json:"url"`
-		Position string   `json:"position"`
-		Company  string   `json:"company"`
-		Location string   `json:"location"`
-		Tags     []string `json:"tags"`
+		Slug        string   `json:"slug"`
+		URL         string   `json:"url"`
+		Position    string   `json:"position"`
+		Company     string   `json:"company"`
+		Location    string   `json:"location"`
+		Tags        []string `json:"tags"`
+		Description string   `json:"description"`
 	}
 
 	jobs := make([]store.Job, 0, len(raw))
@@ -74,13 +75,14 @@ func (r *RemoteOKScraper) Fetch() ([]store.Job, error) {
 		}
 		sid := sourceIDFromURL("remoteok", jobURL)
 		jobs = append(jobs, store.Job{
-			SourceID: sid,
-			Source:   "remoteok",
-			Title:    j.Position,
-			Company:  j.Company,
-			Location: strings.TrimSpace(j.Location),
-			URL:      jobURL,
-			Tags:     j.Tags,
+			SourceID:    sid,
+			Source:      "remoteok",
+			Title:       j.Position,
+			Company:     j.Company,
+			Location:    strings.TrimSpace(j.Location),
+			URL:         jobURL,
+			Tags:        j.Tags,
+			Description: stripHTMLTags(j.Description),
 		})
 	}
 	return jobs, nil

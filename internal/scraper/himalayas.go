@@ -50,6 +50,7 @@ func (h *HimalayasScraper) Fetch() ([]store.Job, error) {
 			LocationRestrictions []string `json:"locationRestrictions"`
 			URL                  string   `json:"applicationLink"`
 			Tags                 []string `json:"tags"`
+			Description          string   `json:"description"`
 		} `json:"jobs"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
@@ -66,13 +67,14 @@ func (h *HimalayasScraper) Fetch() ([]store.Job, error) {
 		location := strings.Join(j.LocationRestrictions, ", ")
 		sid := sourceIDFromURL("himalayas", jobURL)
 		jobs = append(jobs, store.Job{
-			SourceID: sid,
-			Source:   "himalayas",
-			Title:    j.Title,
-			Company:  j.Company.Name,
-			Location: location,
-			URL:      jobURL,
-			Tags:     j.Tags,
+			SourceID:    sid,
+			Source:      "himalayas",
+			Title:       j.Title,
+			Company:     j.Company.Name,
+			Location:    location,
+			URL:         jobURL,
+			Tags:        j.Tags,
+			Description: stripHTMLTags(j.Description),
 		})
 	}
 	return jobs, nil

@@ -42,11 +42,12 @@ func (w *WWRScraper) Fetch() ([]store.Job, error) {
 	var feed struct {
 		Channel struct {
 			Items []struct {
-				Title   string `xml:"title"`
-				Link    string `xml:"link"`
-				GUID    string `xml:"guid"`
-				Region  string `xml:"region"`
-				Type    string `xml:"type"`
+				Title       string `xml:"title"`
+				Link        string `xml:"link"`
+				GUID        string `xml:"guid"`
+				Region      string `xml:"region"`
+				Type        string `xml:"type"`
+				Description string `xml:"description"`
 			} `xml:"item"`
 		} `xml:"channel"`
 	}
@@ -61,11 +62,12 @@ func (w *WWRScraper) Fetch() ([]store.Job, error) {
 		}
 		sid := sourceIDFromURL("weworkremotely", item.Link)
 		jobs = append(jobs, store.Job{
-			SourceID: sid,
-			Source:   "weworkremotely",
-			Title:    item.Title,
-			Location: item.Region,
-			URL:      item.Link,
+			SourceID:    sid,
+			Source:      "weworkremotely",
+			Title:       item.Title,
+			Location:    item.Region,
+			URL:         item.Link,
+			Description: stripHTMLTags(item.Description),
 		})
 	}
 	return jobs, nil

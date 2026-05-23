@@ -94,14 +94,15 @@ func (s *PostgresStore) Save(jobs []Job) error {
 	ctx := context.Background()
 	for _, j := range jobs {
 		_, err := s.pool.Exec(ctx, `
-			INSERT INTO jobs (source_id, source, title, company, location, url, tags, ai_score, ai_reason, notified)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+			INSERT INTO jobs (source_id, source, title, company, location, url, description, tags, ai_score, ai_reason, notified)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 			ON CONFLICT (source_id) DO UPDATE
-			  SET ai_score  = EXCLUDED.ai_score,
-			      ai_reason = EXCLUDED.ai_reason,
-			      notified  = EXCLUDED.notified`,
+			  SET ai_score   = EXCLUDED.ai_score,
+			      ai_reason  = EXCLUDED.ai_reason,
+			      notified   = EXCLUDED.notified,
+			      description = EXCLUDED.description`,
 			j.SourceID, j.Source, j.Title, j.Company, j.Location, j.URL,
-			j.Tags, j.AIScore, j.AIReason, j.Notified,
+			j.Description, j.Tags, j.AIScore, j.AIReason, j.Notified,
 		)
 		if err != nil {
 			return fmt.Errorf("store: save job %q: %w", j.SourceID, err)
@@ -127,7 +128,7 @@ func (s *PostgresStore) MarkNotified(ids []int) error {
 // ordered by ai_score descending.
 func (s *PostgresStore) TopJobs(since time.Time, limit int) ([]Job, error) {
 	rows, err := s.pool.Query(context.Background(), `
-		SELECT id, source_id, source, title, company, location, url, tags, ai_score, ai_reason, notified, created_at
+		SELECT id, source_id, source, title, company, location, url, description, tags, ai_score, ai_reason, notified, created_at
 		FROM jobs
 		WHERE created_at >= $1 AND ai_score > 0
 		ORDER BY ai_score DESC
@@ -142,7 +143,7 @@ func (s *PostgresStore) TopJobs(since time.Time, limit int) ([]Job, error) {
 		var j Job
 		if err := rows.Scan(
 			&j.ID, &j.SourceID, &j.Source, &j.Title, &j.Company,
-			&j.Location, &j.URL, &j.Tags, &j.AIScore, &j.AIReason,
+			&j.Location, &j.URL, &j.Description, &j.Tags, &j.AIScore, &j.AIReason,
 			&j.Notified, &j.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("store: top jobs: scan: %w", err)

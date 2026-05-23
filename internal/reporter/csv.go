@@ -51,6 +51,7 @@ func (c *CSVReporter) Generate(jobs []store.Job, stats ReportStats) error {
 		"AI Score",
 		"AI Reason",
 		"Tags",
+		"Description",
 		"URL",
 		"Created At",
 	}
@@ -69,6 +70,7 @@ func (c *CSVReporter) Generate(jobs []store.Job, stats ReportStats) error {
 			strconv.Itoa(j.AIScore),
 			j.AIReason,
 			strings.Join(j.Tags, "; "),
+			j.Description,
 			j.URL,
 			j.CreatedAt.Format("2006-01-02 15:04:05"),
 		}
@@ -113,6 +115,7 @@ func (c *CSVReporter) GenerateDigest(jobs []store.Job) error {
 		"Source",
 		"Tags",
 		"AI Reason",
+		"Description",
 		"URL",
 	}
 	if err := writer.Write(header); err != nil {
@@ -130,6 +133,7 @@ func (c *CSVReporter) GenerateDigest(jobs []store.Job) error {
 			j.Source,
 			strings.Join(j.Tags, "; "),
 			j.AIReason,
+			j.Description,
 			j.URL,
 		}
 		if err := writer.Write(record); err != nil {
